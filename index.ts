@@ -1,9 +1,23 @@
-import { generateText } from "ai";
-// Import the google module from ai-sdk package
+import { stepCountIs, streamText } from "ai";
 import { google } from "@ai-sdk/google";
+import { SYSTEM_PROMPT } from "./prompts";
+import { generateCommitMessageTool, getFileChangesInDirectoryTool, writeReviewToMarkdownTool } from "./tools";
 
-//specify the model to use for generating text and a prompt
+const codeReviewAgent = async (prompt: string) => {
+    const result = streamText({
+        model: google("models/gemini-1.5-flash"),
+        prompt, system: SYSTEM_PROMPT,
+        tools: {
+            getFileChangesInDirectoryTool: getFileChangesInDirectoryTool,
+            generateCommitMessageTool: generateCommitMessageTool,
+            writeReviewToMarkdownTool: writeReviewToMarkdownTool,
+        },
+        stopWhen: stepCountIs(10),
+    });
 
-const {text} = await generateText({model: google("gemini-2.0-flash-001"), prompt: "What is an AI agent?"});
+    for await (const chunk of result.textStream) {
+        process.stdout.write(chunk);
+    }
+}
 
-console.log(text);
+export default codeReviewAgent;
